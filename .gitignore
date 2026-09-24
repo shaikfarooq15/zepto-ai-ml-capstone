@@ -21,3 +21,7 @@ ENV/
 # OS files
 .DS_Store
 Thumbs.db
+
+# ChromaDB
+chroma_store/
+chroma_db/

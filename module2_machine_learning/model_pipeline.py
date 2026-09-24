@@ -3,7 +3,6 @@
 # Titanic Classification + Fare Regression
 # ==========================================
 
-import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
@@ -15,7 +14,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 
 from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
 
 from sklearn.metrics import (
@@ -35,20 +34,38 @@ from imblearn.over_sampling import SMOTE
 
 
 # ==========================================
-# 1. LOAD AND PREPARE TITANIC DATA
+# 1. LOAD TITANIC CSV
 # ==========================================
+# titanic_analysis.py downloads the dataset once and saves
+# titanic.csv. This module uses that offline CSV.
 
-df = sns.load_dataset("titanic")
+df = pd.read_csv("titanic.csv")
+
+print("\nDataset loaded from titanic.csv")
+print("Dataset shape:", df.shape)
+
+# ==========================================
+# 2. CLEANING FOR MODELING
+# ==========================================
 
 df_clean = df.copy()
 
-# Drop very high-missing-value column
+# Drop column with extremely high missingness.
 df_clean = df_clean.drop(columns=["deck"])
 
-# Drop rows with very low missing percentage
+# Drop the two rows where embarked information is missing.
 df_clean = df_clean.dropna(
     subset=["embarked", "embark_town"]
 )
+
+print("\nCleaned dataset shape:", df_clean.shape)
+print("Remaining missing values:")
+print(df_clean.isnull().sum())
+
+
+# ==========================================
+# 3. CLASSIFICATION FEATURES
+# ==========================================
 
 features = [
     "age",
@@ -61,18 +78,17 @@ features = [
 ]
 
 X = df_clean[features]
-
 y = df_clean["survived"]
 
-print("Features:")
-print(X.head())
+print("\nClassification features:")
+print(features)
 
-print("\nTarget:")
-print(y.head())
+print("\nTarget distribution:")
+print(y.value_counts())
 
 
 # ==========================================
-# 2. TRAIN / TEST SPLIT
+# 4. CLASSIFICATION TRAIN / TEST SPLIT
 # ==========================================
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -83,15 +99,12 @@ X_train, X_test, y_train, y_test = train_test_split(
     stratify=y
 )
 
-print("\nTraining data shape:")
-print(X_train.shape)
-
-print("\nTesting data shape:")
-print(X_test.shape)
+print("\nClassification train shape:", X_train.shape)
+print("Classification test shape:", X_test.shape)
 
 
 # ==========================================
-# 3. PREPROCESSING
+# 5. LEAKAGE-SAFE PREPROCESSING
 # ==========================================
 
 numeric_features = [
@@ -122,227 +135,118 @@ preprocessor = ColumnTransformer([
     ("categorical", categorical_pipeline, categorical_features)
 ])
 
-# Fit only on training data
+# Fit preprocessing ONLY on training data.
 X_train_processed = preprocessor.fit_transform(X_train)
 
-# Transform test data using training rules
+# Apply the training rules to test data.
 X_test_processed = preprocessor.transform(X_test)
 
-print("\nProcessed training data shape:")
-print(X_train_processed.shape)
-
-print("\nProcessed testing data shape:")
-print(X_test_processed.shape)
+print("\nProcessed training shape:", X_train_processed.shape)
+print("Processed testing shape:", X_test_processed.shape)
 
 
 # ==========================================
-# 4. LOGISTIC REGRESSION
+# 6. HELPER FUNCTION FOR CLASSIFICATION
 # ==========================================
 
-model = LogisticRegression(max_iter=1000)
+def evaluate_classifier(model, model_name):
+    model.fit(X_train_processed, y_train)
 
-model.fit(X_train_processed, y_train)
+    predictions = model.predict(X_test_processed)
+    probabilities = model.predict_proba(X_test_processed)[:, 1]
 
-y_pred = model.predict(X_test_processed)
+    metrics = {
+        "Model": model_name,
+        "Accuracy": accuracy_score(y_test, predictions),
+        "Precision": precision_score(y_test, predictions),
+        "Recall": recall_score(y_test, predictions),
+        "F1 Score": f1_score(y_test, predictions),
+        "AUC": roc_auc_score(y_test, probabilities)
+    }
 
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-recall = recall_score(y_test, y_pred)
-f1 = f1_score(y_test, y_pred)
+    print(f"\n========== {model_name.upper()} ==========")
+    print(f"Accuracy:  {metrics['Accuracy']:.4f}")
+    print(f"Precision: {metrics['Precision']:.4f}")
+    print(f"Recall:    {metrics['Recall']:.4f}")
+    print(f"F1 Score:  {metrics['F1 Score']:.4f}")
+    print(f"AUC:       {metrics['AUC']:.4f}")
 
-cm = confusion_matrix(y_test, y_pred)
+    print("\nConfusion Matrix:")
+    print(confusion_matrix(y_test, predictions))
 
-y_probability = model.predict_proba(X_test_processed)[:, 1]
+    fpr, tpr, _ = roc_curve(y_test, probabilities)
 
-fpr, tpr, thresholds = roc_curve(
-    y_test,
-    y_probability
+    plt.figure(figsize=(8, 5))
+    plt.plot(fpr, tpr)
+    plt.plot([0, 1], [0, 1], linestyle="--")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title(f"ROC Curve - {model_name}")
+    plt.show()
+
+    return model, predictions, probabilities, metrics
+
+
+# ==========================================
+# 7. LOGISTIC REGRESSION
+# ==========================================
+
+logistic_model, logistic_pred, logistic_probability, logistic_metrics = (
+    evaluate_classifier(
+        LogisticRegression(max_iter=1000),
+        "Logistic Regression"
+    )
 )
 
-auc_score = roc_auc_score(
-    y_test,
-    y_probability
+
+# ==========================================
+# 8. DECISION TREE
+# ==========================================
+
+decision_tree, tree_pred, tree_probability, tree_metrics = (
+    evaluate_classifier(
+        DecisionTreeClassifier(random_state=42),
+        "Decision Tree"
+    )
 )
 
-print("\n========== LOGISTIC REGRESSION ==========")
+print("\n========== DECISION TREE VISUALIZATION ==========")
 
-print("Accuracy:", accuracy)
-print("Precision:", precision)
-print("Recall:", recall)
-print("F1 Score:", f1)
+feature_names = preprocessor.get_feature_names_out()
 
-print("\nConfusion Matrix:")
-print(cm)
-
-print("\nAUC:", auc_score)
-
-plt.figure(figsize=(8, 5))
-plt.plot(fpr, tpr)
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("ROC Curve - Logistic Regression")
+plt.figure(figsize=(20, 10))
+plot_tree(
+    decision_tree,
+    feature_names=feature_names,
+    class_names=["Not Survived", "Survived"],
+    filled=True,
+    max_depth=3,
+    fontsize=8
+)
+plt.title("Decision Tree - First Three Levels")
 plt.show()
 
 
 # ==========================================
-# 5. DECISION TREE
+# 9. RANDOM FOREST
 # ==========================================
 
-decision_tree = DecisionTreeClassifier(
-    random_state=42
+random_forest, forest_pred, forest_probability, forest_metrics = (
+    evaluate_classifier(
+        RandomForestClassifier(random_state=42),
+        "Random Forest"
+    )
 )
-
-decision_tree.fit(
-    X_train_processed,
-    y_train
-)
-
-tree_pred = decision_tree.predict(
-    X_test_processed
-)
-
-tree_accuracy = accuracy_score(
-    y_test,
-    tree_pred
-)
-
-tree_precision = precision_score(
-    y_test,
-    tree_pred
-)
-
-tree_recall = recall_score(
-    y_test,
-    tree_pred
-)
-
-tree_f1 = f1_score(
-    y_test,
-    tree_pred
-)
-
-tree_cm = confusion_matrix(
-    y_test,
-    tree_pred
-)
-
-tree_probability = decision_tree.predict_proba(
-    X_test_processed
-)[:, 1]
-
-tree_fpr, tree_tpr, tree_thresholds = roc_curve(
-    y_test,
-    tree_probability
-)
-
-tree_auc = roc_auc_score(
-    y_test,
-    tree_probability
-)
-
-print("\n========== DECISION TREE ==========")
-
-print("Accuracy:", tree_accuracy)
-print("Precision:", tree_precision)
-print("Recall:", tree_recall)
-print("F1 Score:", tree_f1)
-
-print("\nConfusion Matrix:")
-print(tree_cm)
-
-print("\nAUC:", tree_auc)
-
-plt.figure(figsize=(8, 5))
-plt.plot(tree_fpr, tree_tpr)
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("ROC Curve - Decision Tree")
-plt.show()
 
 
 # ==========================================
-# 6. RANDOM FOREST
+# 10. CLASS IMBALANCE
 # ==========================================
 
-random_forest = RandomForestClassifier(
-    random_state=42
-)
+print("\n========== CLASS IMBALANCE ==========")
 
-random_forest.fit(
-    X_train_processed,
-    y_train
-)
-
-forest_pred = random_forest.predict(
-    X_test_processed
-)
-
-forest_accuracy = accuracy_score(
-    y_test,
-    forest_pred
-)
-
-forest_precision = precision_score(
-    y_test,
-    forest_pred
-)
-
-forest_recall = recall_score(
-    y_test,
-    forest_pred
-)
-
-forest_f1 = f1_score(
-    y_test,
-    forest_pred
-)
-
-forest_cm = confusion_matrix(
-    y_test,
-    forest_pred
-)
-
-forest_probability = random_forest.predict_proba(
-    X_test_processed
-)[:, 1]
-
-forest_fpr, forest_tpr, forest_thresholds = roc_curve(
-    y_test,
-    forest_probability
-)
-
-forest_auc = roc_auc_score(
-    y_test,
-    forest_probability
-)
-
-print("\n========== RANDOM FOREST ==========")
-
-print("Accuracy:", forest_accuracy)
-print("Precision:", forest_precision)
-print("Recall:", forest_recall)
-print("F1 Score:", forest_f1)
-
-print("\nConfusion Matrix:")
-print(forest_cm)
-
-print("\nAUC:", forest_auc)
-
-plt.figure(figsize=(8, 5))
-plt.plot(forest_fpr, forest_tpr)
-plt.xlabel("False Positive Rate")
-plt.ylabel("True Positive Rate")
-plt.title("ROC Curve - Random Forest")
-plt.show()
-
-
-# ==========================================
-# 7. CLASS IMBALANCE
-# ==========================================
-
-print("\n========== CLASS DISTRIBUTION ==========")
+print("\nTraining class distribution:")
 print(y_train.value_counts())
-
 
 # ------------------------------------------
 # Balanced Logistic Regression
@@ -353,49 +257,20 @@ balanced_model = LogisticRegression(
     class_weight="balanced"
 )
 
-balanced_model.fit(
-    X_train_processed,
-    y_train
-)
+balanced_model.fit(X_train_processed, y_train)
 
-balanced_pred = balanced_model.predict(
-    X_test_processed
-)
+balanced_pred = balanced_model.predict(X_test_processed)
 
-balanced_accuracy = accuracy_score(
-    y_test,
-    balanced_pred
-)
+balanced_metrics = {
+    "Model": "Balanced Logistic Regression",
+    "Accuracy": accuracy_score(y_test, balanced_pred),
+    "Precision": precision_score(y_test, balanced_pred),
+    "Recall": recall_score(y_test, balanced_pred),
+    "F1 Score": f1_score(y_test, balanced_pred)
+}
 
-balanced_precision = precision_score(
-    y_test,
-    balanced_pred
-)
-
-balanced_recall = recall_score(
-    y_test,
-    balanced_pred
-)
-
-balanced_f1 = f1_score(
-    y_test,
-    balanced_pred
-)
-
-balanced_cm = confusion_matrix(
-    y_test,
-    balanced_pred
-)
-
-print("\n========== BALANCED LOGISTIC REGRESSION ==========")
-
-print("Accuracy:", balanced_accuracy)
-print("Precision:", balanced_precision)
-print("Recall:", balanced_recall)
-print("F1 Score:", balanced_f1)
-
-print("\nConfusion Matrix:")
-print(balanced_cm)
+print("\nBalanced Logistic Regression:")
+print(pd.Series(balanced_metrics))
 
 
 # ------------------------------------------
@@ -415,58 +290,26 @@ print(y_train.value_counts())
 print("\nAfter SMOTE:")
 print(y_train_smote.value_counts())
 
+smote_model = LogisticRegression(max_iter=1000)
 
-smote_model = LogisticRegression(
-    max_iter=1000
-)
+smote_model.fit(X_train_smote, y_train_smote)
 
-smote_model.fit(
-    X_train_smote,
-    y_train_smote
-)
+smote_pred = smote_model.predict(X_test_processed)
 
-smote_pred = smote_model.predict(
-    X_test_processed
-)
+smote_metrics = {
+    "Model": "SMOTE Logistic Regression",
+    "Accuracy": accuracy_score(y_test, smote_pred),
+    "Precision": precision_score(y_test, smote_pred),
+    "Recall": recall_score(y_test, smote_pred),
+    "F1 Score": f1_score(y_test, smote_pred)
+}
 
-smote_accuracy = accuracy_score(
-    y_test,
-    smote_pred
-)
-
-smote_precision = precision_score(
-    y_test,
-    smote_pred
-)
-
-smote_recall = recall_score(
-    y_test,
-    smote_pred
-)
-
-smote_f1 = f1_score(
-    y_test,
-    smote_pred
-)
-
-smote_cm = confusion_matrix(
-    y_test,
-    smote_pred
-)
-
-print("\n========== SMOTE LOGISTIC REGRESSION ==========")
-
-print("Accuracy:", smote_accuracy)
-print("Precision:", smote_precision)
-print("Recall:", smote_recall)
-print("F1 Score:", smote_f1)
-
-print("\nConfusion Matrix:")
-print(smote_cm)
+print("\nSMOTE Logistic Regression:")
+print(pd.Series(smote_metrics))
 
 
 # ==========================================
-# 8. GRIDSEARCHCV - RANDOM FOREST
+# 11. GRIDSEARCHCV - RANDOM FOREST
 # ==========================================
 
 param_grid = {
@@ -485,196 +328,129 @@ grid_search = GridSearchCV(
     scoring="f1"
 )
 
-grid_search.fit(
-    X_train_processed,
-    y_train
-)
-
-print("\n========== GRID SEARCH ==========")
-
-print("Best Parameters:")
-print(grid_search.best_params_)
+grid_search.fit(X_train_processed, y_train)
 
 best_model = grid_search.best_estimator_
 
-print("\nBest Model OOB Score:")
-print(best_model.oob_score_)
+print("\n========== GRID SEARCH ==========")
+print("Best parameters:")
+print(grid_search.best_params_)
+print("Best cross-validation F1:", grid_search.best_score_)
+print("Best model OOB score:", best_model.oob_score_)
 
 
 # ==========================================
-# 9. TUNED RANDOM FOREST EVALUATION
+# 12. TUNED RANDOM FOREST
 # ==========================================
 
-best_pred = best_model.predict(
-    X_test_processed
-)
+best_pred = best_model.predict(X_test_processed)
+best_probability = best_model.predict_proba(X_test_processed)[:, 1]
 
-best_accuracy = accuracy_score(
-    y_test,
-    best_pred
-)
-
-best_precision = precision_score(
-    y_test,
-    best_pred
-)
-
-best_recall = recall_score(
-    y_test,
-    best_pred
-)
-
-best_f1 = f1_score(
-    y_test,
-    best_pred
-)
-
-best_cm = confusion_matrix(
-    y_test,
-    best_pred
-)
-
-best_probability = best_model.predict_proba(
-    X_test_processed
-)[:, 1]
-
-best_fpr, best_tpr, best_thresholds = roc_curve(
-    y_test,
-    best_probability
-)
-
-best_auc = roc_auc_score(
-    y_test,
-    best_probability
-)
+tuned_rf_metrics = {
+    "Model": "Tuned Random Forest",
+    "Accuracy": accuracy_score(y_test, best_pred),
+    "Precision": precision_score(y_test, best_pred),
+    "Recall": recall_score(y_test, best_pred),
+    "F1 Score": f1_score(y_test, best_pred),
+    "AUC": roc_auc_score(y_test, best_probability)
+}
 
 print("\n========== TUNED RANDOM FOREST ==========")
 
-print("Accuracy:", best_accuracy)
-print("Precision:", best_precision)
-print("Recall:", best_recall)
-print("F1 Score:", best_f1)
+for key, value in tuned_rf_metrics.items():
+    if key != "Model":
+        print(f"{key}: {value:.4f}")
 
 print("\nConfusion Matrix:")
-print(best_cm)
-
-print("\nAUC:", best_auc)
+print(confusion_matrix(y_test, best_pred))
 
 
 # ==========================================
-# 10. MODEL COMPARISON
+# 13. CLASSIFICATION MODEL COMPARISON
 # ==========================================
 
-model_comparison = pd.DataFrame({
-    "Model": [
-        "Logistic Regression",
-        "Decision Tree",
-        "Random Forest",
-        "Tuned Random Forest"
-    ],
-    "Accuracy": [
-        accuracy,
-        tree_accuracy,
-        forest_accuracy,
-        best_accuracy
-    ],
-    "Precision": [
-        precision,
-        tree_precision,
-        forest_precision,
-        best_precision
-    ],
-    "Recall": [
-        recall,
-        tree_recall,
-        forest_recall,
-        best_recall
-    ],
-    "F1 Score": [
-        f1,
-        tree_f1,
-        forest_f1,
-        best_f1
-    ],
-    "AUC": [
-        auc_score,
-        tree_auc,
-        forest_auc,
-        best_auc
-    ]
-})
+classification_comparison = pd.DataFrame([
+    logistic_metrics,
+    tree_metrics,
+    forest_metrics,
+    tuned_rf_metrics
+])
 
-print("\n========== MODEL COMPARISON ==========")
-print(model_comparison.round(4))
+print("\n========== CLASSIFICATION MODEL COMPARISON ==========")
+print(classification_comparison.round(4).to_string(index=False))
 
 
 # ==========================================
-# 11. FINAL MODEL SELECTION
+# 14. FINAL CLASSIFICATION MODEL SELECTION
 # ==========================================
+# Select using F1 first and AUC as the tie-breaker.
+# This is based on the actual test-set metrics produced above.
 
-print("\n========== FINAL MODEL SELECTION ==========")
+classification_comparison_sorted = classification_comparison.sort_values(
+    by=["F1 Score", "AUC"],
+    ascending=False
+)
+
+selected_model_name = classification_comparison_sorted.iloc[0]["Model"]
+
+print("\n========== CLASSIFICATION MODEL SELECTION ==========")
+print("Selection rule: highest test F1 Score, with AUC as tie-breaker.")
+print("Selected model based on this rule:", selected_model_name)
 
 print("""
-Logistic Regression achieved:
-Accuracy  = 80.90%
-Precision = 78.33%
-Recall    = 69.12%
-F1 Score  = 73.44%
-AUC       = 86.10%
-
-Tuned Random Forest achieved:
-Accuracy  = 80.90%
-Precision = 78.33%
-Recall    = 69.12%
-F1 Score  = 73.44%
-AUC       = 82.45%
-
-Both models produced the same accuracy, precision, recall,
-and F1 score on the test set.
-
-Logistic Regression had the higher AUC in this evaluation.
-
-Therefore, Logistic Regression is used as the final
-classification model in the saved deployment pipeline.
+The classification comparison reports Accuracy, Precision, Recall,
+F1 Score and AUC for the tested models. The selection rule is stated
+explicitly so the saved deployment model is based on calculated
+evaluation metrics rather than hard-coded results.
 """)
 
 
 # ==========================================
-# 12. FINAL CLASSIFICATION PIPELINE
+# 15. FINAL CLASSIFICATION PIPELINE
 # ==========================================
+
+# Use the selected classifier object.
+classifier_objects = {
+    "Logistic Regression": LogisticRegression(max_iter=1000),
+    "Decision Tree": DecisionTreeClassifier(random_state=42),
+    "Random Forest": RandomForestClassifier(random_state=42),
+    "Tuned Random Forest": best_model
+}
+
+selected_classifier = classifier_objects[selected_model_name]
 
 final_pipeline = Pipeline([
     ("preprocessor", preprocessor),
-    ("model", LogisticRegression(max_iter=1000))
+    ("model", selected_classifier)
 ])
 
-# Train complete pipeline using raw training data
-final_pipeline.fit(
-    X_train,
-    y_train
-)
+final_pipeline.fit(X_train, y_train)
 
-print("\nFinal classification pipeline trained successfully!")
+print("\nFinal classification pipeline trained successfully.")
 
 
-# Save classification pipeline
+# ==========================================
+# 16. SAVE / RELOAD CLASSIFICATION PIPELINE
+# ==========================================
+
 joblib.dump(
     final_pipeline,
     "titanic_survival_pipeline.joblib"
 )
 
-print("\nClassification pipeline saved successfully!")
+print("Classification pipeline saved.")
 
-
-# Reload classification pipeline
 loaded_pipeline = joblib.load(
     "titanic_survival_pipeline.joblib"
 )
 
-print("\nClassification pipeline loaded successfully!")
+print("Classification pipeline reloaded successfully.")
 
 
-# Test classification pipeline with raw input
+# ==========================================
+# 17. TEST CLASSIFICATION PIPELINE WITH RAW INPUT
+# ==========================================
+
 raw_passenger = pd.DataFrame([{
     "age": 22,
     "fare": 7.25,
@@ -685,9 +461,7 @@ raw_passenger = pd.DataFrame([{
     "embarked": "S"
 }])
 
-prediction = loaded_pipeline.predict(
-    raw_passenger
-)
+prediction = loaded_pipeline.predict(raw_passenger)
 
 print("\nRaw passenger:")
 print(raw_passenger)
@@ -697,13 +471,12 @@ print(prediction[0])
 
 
 # ==========================================
-# 13. FARE REGRESSION
+# 18. FARE REGRESSION
 # ==========================================
 
-# Target: Fare
-y_fare = df_clean["fare"]
+# Target = fare.
+# Fare itself is NOT used as an input feature.
 
-# Fare is NOT included in the features
 regression_features = [
     "age",
     "sex",
@@ -714,21 +487,16 @@ regression_features = [
 ]
 
 X_fare = df_clean[regression_features]
+y_fare = df_clean["fare"]
 
 print("\n========== FARE REGRESSION ==========")
-
-print("Regression X shape:")
-print(X_fare.shape)
-
-print("Regression y shape:")
-print(y_fare.shape)
-
-print("Regression features:")
-print(regression_features)
+print("Regression features:", regression_features)
+print("X shape:", X_fare.shape)
+print("y shape:", y_fare.shape)
 
 
 # ==========================================
-# 14. REGRESSION TRAIN / TEST SPLIT
+# 19. REGRESSION TRAIN / TEST SPLIT
 # ==========================================
 
 X_fare_train, X_fare_test, y_fare_train, y_fare_test = train_test_split(
@@ -738,15 +506,12 @@ X_fare_train, X_fare_test, y_fare_train, y_fare_test = train_test_split(
     random_state=42
 )
 
-print("\nRegression train/test split:")
-print("X_train:", X_fare_train.shape)
-print("X_test:", X_fare_test.shape)
-print("y_train:", y_fare_train.shape)
-print("y_test:", y_fare_test.shape)
+print("\nRegression train shape:", X_fare_train.shape)
+print("Regression test shape:", X_fare_test.shape)
 
 
 # ==========================================
-# 15. REGRESSION PREPROCESSING
+# 20. REGRESSION PREPROCESSING
 # ==========================================
 
 reg_numeric_features = [
@@ -776,24 +541,22 @@ reg_preprocessor = ColumnTransformer([
     ("categorical", reg_categorical_pipeline, reg_categorical_features)
 ])
 
-
-# Fit only on training data
 X_fare_train_processed = reg_preprocessor.fit_transform(
     X_fare_train
 )
 
-# Transform test data
 X_fare_test_processed = reg_preprocessor.transform(
     X_fare_test
 )
 
-print("\nProcessed regression data:")
-print("X_train processed:", X_fare_train_processed.shape)
-print("X_test processed:", X_fare_test_processed.shape)
+print("\nProcessed regression train shape:",
+      X_fare_train_processed.shape)
+print("Processed regression test shape:",
+      X_fare_test_processed.shape)
 
 
 # ==========================================
-# 16. MULTIVARIATE LINEAR REGRESSION
+# 21. MULTIVARIATE LINEAR REGRESSION
 # ==========================================
 
 linear_model = LinearRegression()
@@ -803,29 +566,15 @@ linear_model.fit(
     y_fare_train
 )
 
-print("\nLinear Regression model trained successfully!")
-
-
-# ==========================================
-# 17. FARE PREDICTIONS
-# ==========================================
-
 y_fare_pred = linear_model.predict(
     X_fare_test_processed
 )
 
-print("\nFirst 10 actual vs predicted fares:")
-
-print(
-    pd.DataFrame({
-        "Actual Fare": y_fare_test.iloc[:10].values,
-        "Predicted Fare": y_fare_pred[:10]
-    })
-)
+print("\nLinear Regression model trained successfully.")
 
 
 # ==========================================
-# 18. REGRESSION EVALUATION
+# 22. REGRESSION EVALUATION
 # ==========================================
 
 mae = mean_absolute_error(
@@ -843,14 +592,6 @@ r2 = r2_score(
     y_fare_pred
 )
 
-print("\n========== REGRESSION EVALUATION ==========")
-
-print(f"MAE: {mae:.2f}")
-print(f"RMSE: {rmse:.2f}")
-print(f"R²: {r2:.4f}")
-
-
-# Adjusted R²
 n = X_fare_test_processed.shape[0]
 p = X_fare_test_processed.shape[1]
 
@@ -858,72 +599,51 @@ adjusted_r2 = 1 - (
     (1 - r2) * (n - 1) / (n - p - 1)
 )
 
+print("\n========== REGRESSION EVALUATION ==========")
+print(f"MAE: {mae:.4f}")
+print(f"RMSE: {rmse:.4f}")
+print(f"R²: {r2:.4f}")
 print(f"Adjusted R²: {adjusted_r2:.4f}")
 
 
 # ==========================================
-# 19. REGRESSION INTERPRETATION
+# 23. ACTUAL VS PREDICTED
 # ==========================================
 
-print("""
-Regression Metric Interpretation:
+actual_vs_predicted = pd.DataFrame({
+    "Actual Fare": y_fare_test.iloc[:10].values,
+    "Predicted Fare": y_fare_pred[:10]
+})
 
-MAE = 21.14 means the model's predictions are off by
-about 21.14 fare units on average.
-
-RMSE = 41.75 is higher than MAE because some predictions
-have relatively large errors.
-
-R² = 0.3468 means the model explains about 34.68%
-of the variation in Fare.
-
-Adjusted R² = 0.3118 accounts for the number of
-predictors used by the regression model.
-""")
+print("\n========== ACTUAL VS PREDICTED FARES ==========")
+print(actual_vs_predicted.round(2))
 
 
 # ==========================================
-# 20. RESIDUAL PLOT
+# 24. RESIDUAL ANALYSIS
 # ==========================================
 
 residuals = y_fare_test - y_fare_pred
 
 plt.figure(figsize=(8, 5))
-
-plt.scatter(
-    y_fare_pred,
-    residuals
-)
-
-plt.axhline(
-    y=0,
-    linestyle="--"
-)
-
+plt.scatter(y_fare_pred, residuals)
+plt.axhline(y=0, linestyle="--")
 plt.xlabel("Predicted Fare")
 plt.ylabel("Residuals")
 plt.title("Residual Plot - Fare Regression")
-
 plt.show()
 
-
 print("""
-Residual Plot Interpretation:
-
-The residuals are not completely randomly distributed
-around zero.
-
-There are some visible patterns and several large positive
-residuals, especially for higher predicted fares.
-
-This shows that the linear regression model does not capture
-all relationships in the Fare data and that some observations
-have substantially larger prediction errors.
+Residual interpretation:
+The residuals show that prediction errors are not perfectly random
+around zero. Several observations have comparatively large errors,
+especially at higher fare values. This indicates that the linear
+model does not capture every relationship affecting fare.
 """)
 
 
 # ==========================================
-# 21. SAVE FARE REGRESSION PIPELINE
+# 25. SAVE / RELOAD FARE PIPELINE
 # ==========================================
 
 fare_pipeline = Pipeline([
@@ -931,34 +651,27 @@ fare_pipeline = Pipeline([
     ("model", LinearRegression())
 ])
 
-# Train complete regression pipeline on raw training data
 fare_pipeline.fit(
     X_fare_train,
     y_fare_train
 )
 
-# Save regression pipeline
 joblib.dump(
     fare_pipeline,
     "fare_regression_pipeline.joblib"
 )
 
-print("\nFare regression pipeline saved successfully!")
-
-
-# ==========================================
-# 22. RELOAD FARE REGRESSION PIPELINE
-# ==========================================
+print("\nFare regression pipeline saved.")
 
 loaded_fare_pipeline = joblib.load(
     "fare_regression_pipeline.joblib"
 )
 
-print("\nFare regression pipeline loaded successfully!")
+print("Fare regression pipeline reloaded successfully.")
 
 
 # ==========================================
-# 23. TEST FARE PIPELINE WITH RAW INPUT
+# 26. TEST FARE PIPELINE WITH RAW INPUT
 # ==========================================
 
 raw_passenger_fare = pd.DataFrame([{
@@ -979,6 +692,79 @@ print(raw_passenger_fare)
 
 print("\nPredicted Fare:")
 print(fare_prediction[0])
+
+
+# ==========================================
+# 27. FINAL CLASSIFICATION + REGRESSION TABLE
+# ==========================================
+
+classification_final_table = classification_comparison.copy()
+
+classification_final_table["Task"] = "Classification"
+
+classification_final_table["MAE"] = float("nan")
+classification_final_table["RMSE"] = float("nan")
+classification_final_table["R²"] = float("nan")
+classification_final_table["Adjusted R²"] = float("nan")
+
+regression_row = pd.DataFrame([{
+    "Model": "Linear Regression",
+    "Accuracy": float("nan"),
+    "Precision": float("nan"),
+    "Recall": float("nan"),
+    "F1 Score": float("nan"),
+    "AUC": float("nan"),
+    "Task": "Regression",
+    "MAE": mae,
+    "RMSE": rmse,
+    "R²": r2,
+    "Adjusted R²": adjusted_r2
+}])
+
+final_comparison = pd.concat(
+    [classification_final_table, regression_row],
+    ignore_index=True
+)
+
+print("\n========== FINAL MODEL COMPARISON ==========")
+
+print(
+    final_comparison[
+        [
+            "Task",
+            "Model",
+            "Accuracy",
+            "Precision",
+            "Recall",
+            "F1 Score",
+            "AUC",
+            "MAE",
+            "RMSE",
+            "R²",
+            "Adjusted R²"
+        ]
+    ].round(4).to_string(index=False)
+)
+
+
+# ==========================================
+# 28. FINAL WRITTEN RECOMMENDATION
+# ==========================================
+
+print("\n========== FINAL WRITTEN RECOMMENDATION ==========")
+
+print(f"""
+For the Titanic classification task, the tested models were compared
+using Accuracy, Precision, Recall, F1 Score and AUC. The stated
+selection rule uses F1 Score first and AUC as a tie-breaker, resulting
+in {selected_model_name} for the saved classification pipeline.
+
+For the Fare regression task, Linear Regression was evaluated using
+MAE, RMSE, R² and Adjusted R². The residual analysis indicates that
+the model leaves some substantial prediction errors, particularly
+for higher fare observations. These results should be considered
+when interpreting the regression predictions.
+""")
 
 
 # ==========================================

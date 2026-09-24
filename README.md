@@ -663,57 +663,845 @@ END
 
 # Module 2 — Machine Learning
 
-Module 2 will build a complete Machine Learning workflow using the Titanic dataset.
+Module 2 builds a complete Machine Learning workflow using the Titanic dataset.
 
-The planned workflow includes:
+The module contains two Machine Learning tasks:
+
+1. Classification — predicting passenger survival
+2. Regression — predicting passenger fare
+
+---
+
+## 1. Dataset
+
+The Titanic dataset was loaded using Seaborn.
+
+### Original Dataset
+
+```text
+Rows: 891
+Columns: 15
+```
+
+### Classification Target
+
+```text
+survived
+```
+
+Where:
+
+```text
+0 → Did not survive
+1 → Survived
+```
+
+---
+
+## 2. Missing Value Analysis
+
+Missing values were measured before selecting the cleaning strategy.
+
+### Age
+
+```text
+Missing values: 177
+Missing percentage: 19.87%
+Strategy: Median imputation
+```
+
+### Embarked
+
+```text
+Missing values: 2
+Missing percentage: 0.22%
+Strategy: Drop rows
+```
+
+### Embark Town
+
+```text
+Missing values: 2
+Missing percentage: 0.22%
+Strategy: Drop rows
+```
+
+### Deck
+
+```text
+Missing values: 688
+Missing percentage: 77.22%
+Strategy: Drop column
+```
+
+### After Cleaning
+
+```text
+Rows: 889
+Columns: 14
+Missing values: 0
+```
+
+---
+
+## 3. Exploratory Data Analysis
+
+The following variables were explored:
+
+- Age
+- Fare
+- Sex
+- Passenger class
+- Survival
+
+### Visualizations
+
+The project contains five main visualizations:
+
+1. Age histogram
+2. Fare box plot
+3. Survival by Sex
+4. Survival by Passenger Class
+5. Correlation heatmap
+
+### Age Histogram
+
+The distribution shows that many passengers were in the young-to-middle-age range, with a strong concentration around approximately 20–30 years.
+
+### Fare Box Plot
+
+Most passengers paid relatively low fares, while some passengers paid substantially higher fares. The distribution contains high-fare outliers.
+
+### Survival by Sex
+
+Female passengers had a substantially higher survival rate than male passengers in this dataset.
+
+### Survival by Passenger Class
+
+Survival rates differed across passenger classes:
+
+| Passenger Class | Approx. Survival Rate |
+|---|---:|
+| 1st Class | 63% |
+| 2nd Class | 47% |
+| 3rd Class | 24% |
+
+These are associations observed in this dataset and do not by themselves establish causation.
+
+### Correlation Heatmap
+
+Among the numerical variables, passenger class and fare showed stronger linear relationships with survival than variables such as age, SibSp, and Parch.
+
+> Correlation does not imply causation.
+
+---
+
+## 4. Feature Preparation
+
+### Classification Features
+
+```text
+age
+fare
+sex
+pclass
+sibsp
+parch
+embarked
+```
+
+### Target
+
+```text
+survived
+```
+
+The dataset was divided using a stratified train/test split.
+
+```text
+Training data: 711 rows
+Testing data: 178 rows
+```
+
+Stratification was used to preserve the target-class distribution between training and testing data.
+
+---
+
+## 5. Data Preprocessing
+
+A `ColumnTransformer` was used to apply different preprocessing to numerical and categorical features.
+
+### Numerical Features
+
+```text
+age
+fare
+pclass
+sibsp
+parch
+```
+
+### Numerical Processing
+
+```text
+Median Imputation
+        ↓
+StandardScaler
+```
+
+### Categorical Features
+
+```text
+sex
+embarked
+```
+
+### Categorical Processing
+
+```text
+Most-Frequent Imputation
+        ↓
+OneHotEncoder
+```
+
+### Processed Data
+
+```text
+Training: 711 × 10
+Testing: 178 × 10
+```
+
+### Preventing Data Leakage
+
+Preprocessing was fitted only on the training data:
+
+```python
+X_train_processed = preprocessor.fit_transform(X_train)
+X_test_processed = preprocessor.transform(X_test)
+```
+
+This prevents information from the test set from being used while learning preprocessing parameters.
+
+---
+
+## 6. Classification Models
+
+Three classification models were trained:
+
+- Logistic Regression
+- Decision Tree
+- Random Forest
+
+### Evaluation Metrics
+
+- Accuracy
+- Precision
+- Recall
+- F1 Score
+- Confusion Matrix
+- ROC Curve
+- AUC
+
+---
+
+## 7. Logistic Regression
+
+### Results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 80.90% |
+| Precision | 78.33% |
+| Recall | 69.12% |
+| F1 Score | 73.44% |
+| AUC | 86.10% |
+
+### Confusion Matrix
+
+```text
+[[97 13]
+ [21 47]]
+```
+
+The ROC/AUC evaluation produced an AUC of approximately 0.861 on the test set.
+
+---
+
+## 8. Decision Tree
+
+### Results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 76.97% |
+| Precision | 69.01% |
+| Recall | 72.06% |
+| F1 Score | 70.50% |
+| AUC | 75.41% |
+
+### Confusion Matrix
+
+```text
+[[88 22]
+ [19 49]]
+```
+
+---
+
+## 9. Random Forest
+
+### Results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 80.34% |
+| Precision | 77.05% |
+| Recall | 69.12% |
+| F1 Score | 72.87% |
+| AUC | 82.25% |
+
+### Confusion Matrix
+
+```text
+[[96 14]
+ [21 47]]
+```
+
+---
+
+## 10. Class Imbalance
+
+The training target distribution was:
+
+```text
+0 → 439
+1 → 272
+```
+
+The classes were therefore not evenly distributed.
+
+Two balancing approaches were tested:
+
+- `class_weight="balanced"`
+- SMOTE
+
+---
+
+## 11. Balanced Logistic Regression
+
+The Logistic Regression model was trained using:
+
+```python
+class_weight="balanced"
+```
+
+### Results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 79.21% |
+| Precision | 71.83% |
+| Recall | 75.00% |
+| F1 Score | 73.38% |
+
+Compared with the baseline model, recall increased from:
+
+```text
+69.12% → 75.00%
+```
+
+while accuracy and precision decreased.
+
+---
+
+## 12. SMOTE
+
+SMOTE was applied **only to the training data**.
+
+### Before SMOTE
+
+```text
+0 → 439
+1 → 272
+```
+
+### After SMOTE
+
+```text
+0 → 439
+1 → 439
+```
+
+The test data remained untouched.
+
+### SMOTE Logistic Regression Results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 79.78% |
+| Precision | 73.53% |
+| Recall | 73.53% |
+| F1 Score | 73.53% |
+
+The experiment demonstrates that class-balancing methods can change the trade-off between recall, precision, and accuracy.
+
+---
+
+## 13. Random Forest Hyperparameter Tuning
+
+`GridSearchCV` was used to tune the Random Forest.
+
+### Parameters Searched
+
+```text
+n_estimators
+max_depth
+max_features
+```
+
+### Best Parameters
+
+```text
+max_depth = 10
+max_features = sqrt
+n_estimators = 50
+```
+
+### Best OOB Score
+
+```text
+81.01%
+```
+
+---
+
+## 14. Tuned Random Forest
+
+### Test-Set Results
+
+| Metric | Result |
+|---|---:|
+| Accuracy | 80.90% |
+| Precision | 78.33% |
+| Recall | 69.12% |
+| F1 Score | 73.44% |
+| AUC | 82.45% |
+
+### Confusion Matrix
+
+```text
+[[97 13]
+ [21 47]]
+```
+
+---
+
+## 15. Model Comparison
+
+| Model | Accuracy | Precision | Recall | F1 | AUC |
+|---|---:|---:|---:|---:|---:|
+| Logistic Regression | 80.90% | 78.33% | 69.12% | 73.44% | 86.10% |
+| Decision Tree | 76.97% | 69.01% | 72.06% | 70.50% | 75.41% |
+| Random Forest | 80.34% | 77.05% | 69.12% | 72.87% | 82.25% |
+| Tuned Random Forest | 80.90% | 78.33% | 69.12% | 73.44% | 82.45% |
+
+The Logistic Regression and tuned Random Forest produced the same accuracy, precision, recall, and F1 score on this test set.
+
+Logistic Regression had the higher AUC in this evaluation and was therefore used as the final classification model in the saved deployment pipeline.
+
+---
+
+## 16. Final Classification Pipeline
+
+The complete classification workflow was saved as a single pipeline.
+
+### Pipeline
+
+```text
+Raw Input
+    ↓
+Preprocessing
+    ↓
+Encoding
+    ↓
+Scaling
+    ↓
+Logistic Regression
+    ↓
+Prediction
+```
+
+### Saved Pipeline
+
+```text
+module2_machine_learning/titanic_survival_pipeline.joblib
+```
+
+The saved pipeline was:
+
+1. Loaded again
+2. Given raw passenger data
+3. Used to generate a prediction
+
+### Example Raw Passenger
+
+```text
+age       = 22
+fare      = 7.25
+sex       = male
+pclass    = 3
+sibsp     = 1
+parch     = 0
+embarked  = S
+```
+
+### Prediction
+
+```text
+0 → Did not survive
+```
+
+---
+
+## 17. Fare Regression
+
+A second Machine Learning task was implemented to predict passenger fare.
+
+### Target
+
+```text
+fare
+```
+
+### Features
+
+```text
+age
+sex
+pclass
+sibsp
+parch
+embarked
+```
+
+### Model
+
+```text
+Linear Regression
+```
+
+### Dataset
+
+```text
+889 rows
+6 input features
+```
+
+### Train/Test Split
+
+```text
+Training: 711
+Testing: 178
+```
+
+---
+
+## 18. Regression Evaluation
+
+The regression model was evaluated using:
+
+- MAE
+- RMSE
+- R²
+- Adjusted R²
+- Residual Plot
+
+### MAE
+
+```text
+21.14
+```
+
+The predictions were off by approximately 21.14 fare units on average.
+
+### RMSE
+
+```text
+41.75
+```
+
+RMSE was higher than MAE because some observations had relatively large prediction errors.
+
+### R²
+
+```text
+0.3468
+```
+
+The model explains approximately 34.68% of the variation in the Fare target.
+
+### Adjusted R²
+
+```text
+0.3118
+```
+
+Adjusted R² accounts for the number of predictors used by the regression model.
+
+---
+
+## 19. Residual Analysis
+
+A residual plot was generated to analyze the regression errors.
+
+The residuals were not completely randomly distributed around zero.
+
+There were visible patterns and several larger residuals, particularly around higher predicted fares.
+
+This indicates that the linear regression model does not capture all relationships in the Fare data and that some observations have substantially larger prediction errors.
+
+---
+
+## 20. Fare Regression Pipeline
+
+The complete Fare regression workflow was also saved using Joblib.
+
+### Pipeline
+
+```text
+Raw Input
+    ↓
+Preprocessing
+    ↓
+Linear Regression
+    ↓
+Fare Prediction
+```
+
+### Saved Pipeline
+
+```text
+module2_machine_learning/fare_regression_pipeline.joblib
+```
+
+The pipeline was reloaded and tested using raw passenger data.
+
+### Example
+
+```text
+age       = 22
+sex       = male
+pclass    = 3
+sibsp     = 1
+parch     = 0
+embarked  = S
+```
+
+### Predicted Fare
+
+```text
+3.9721
+```
+
+---
+
+## 21. Module 2 Project Structure
+
+```text
+module2_machine_learning/
+│
+├── model_pipeline.py
+├── titanic_analysis.py
+├── titanic_survival_pipeline.joblib
+└── fare_regression_pipeline.joblib
+```
+
+---
+
+## 22. Module 2 Technologies
+
+- Python
+- Pandas
+- NumPy
+- Seaborn
+- Matplotlib
+- Scikit-learn
+- Imbalanced-learn
+- Joblib
+
+---
+
+## 23. Module 2 Complete Workflow
 
 ```text
 START
   ↓
-Load Dataset
+Load Titanic Dataset
   ↓
 Understand Data
   ↓
-EDA
+Missing Value Analysis
   ↓
-Handle Missing Values
+Data Cleaning
   ↓
-Feature Engineering
+EDA + Visualization
   ↓
-Train/Test Split
+Feature Selection
+  ↓
+Train / Test Split
   ↓
 Preprocessing
   ↓
-Encoding
+Encoding + Scaling
   ↓
-Scaling
-  ↓
-Model Training
-  ↓
-Logistic Regression
-  ↓
-Decision Tree
-  ↓
-Random Forest
+Classification Models
   ↓
 Model Evaluation
   ↓
 Class Imbalance
   ↓
+Balanced Logistic Regression
+  ↓
 SMOTE
   ↓
-Hyperparameter Tuning
+Random Forest
   ↓
-Best Model
+GridSearchCV
   ↓
-Save Pipeline
+Model Comparison
+  ↓
+Final Classification Pipeline
+  ↓
+Joblib Save / Reload
+  ↓
+Raw Passenger Prediction
+  ↓
+Fare Regression
+  ↓
+Regression Evaluation
+  ↓
+Residual Analysis
+  ↓
+Fare Pipeline Save / Reload
+  ↓
+Raw Fare Prediction
   ↓
 END
 ```
 
-Module 2 will also include a regression task for predicting `Fare`.
+---
+
+## 24. Module 2 Final Checklist
+
+### Dataset & EDA
+
+- [x] Loaded Titanic dataset using Seaborn
+- [x] Checked dataset shape and structure
+- [x] Measured missing values
+- [x] Calculated missing percentages
+- [x] Applied missing-value strategies
+- [x] Explored Age
+- [x] Explored Fare
+- [x] Explored Sex
+- [x] Explored Passenger Class
+- [x] Explored Survival
+- [x] Created histogram
+- [x] Created box plot
+- [x] Created survival comparison charts
+- [x] Created correlation heatmap
+
+### Classification
+
+- [x] Created target variable
+- [x] Created features
+- [x] Train/test split
+- [x] Preprocessing
+- [x] Encoding
+- [x] Scaling
+- [x] Logistic Regression
+- [x] Decision Tree
+- [x] Random Forest
+- [x] Accuracy
+- [x] Precision
+- [x] Recall
+- [x] F1 Score
+- [x] Confusion Matrix
+- [x] ROC
+- [x] AUC
+
+### Class Imbalance
+
+- [x] Checked class distribution
+- [x] Baseline model
+- [x] `class_weight="balanced"`
+- [x] SMOTE
+- [x] SMOTE applied only to training data
+- [x] Compared balancing approaches
+
+### Model Tuning
+
+- [x] GridSearchCV
+- [x] Tuned `n_estimators`
+- [x] Tuned `max_depth`
+- [x] Tuned `max_features`
+- [x] OOB score
+- [x] Compared tuned model with other models
+
+### Regression
+
+- [x] Fare prediction
+- [x] Multivariate Linear Regression
+- [x] MAE
+- [x] RMSE
+- [x] R²
+- [x] Adjusted R²
+- [x] Residual plot
+- [x] Residual interpretation
+
+### Deployment Preparation
+
+- [x] Saved classification pipeline with Joblib
+- [x] Reloaded classification pipeline
+- [x] Tested raw passenger input
+- [x] Saved Fare regression pipeline
+- [x] Reloaded Fare regression pipeline
+- [x] Tested raw passenger input
 
 ---
+
+## 25. Module 2 Status
+
+Module 2 Machine Learning is **complete**.
+
+The module demonstrates an end-to-end Machine Learning workflow:
+
+```text
+DATA
+  ↓
+EDA
+  ↓
+CLEANING
+  ↓
+PREPROCESSING
+  ↓
+CLASSIFICATION
+  ↓
+EVALUATION
+  ↓
+IMBALANCE HANDLING
+  ↓
+HYPERPARAMETER TUNING
+  ↓
+MODEL SELECTION
+  ↓
+REGRESSION
+  ↓
+ERROR ANALYSIS
+  ↓
+JOBLIB PIPELINES
+  ↓
+RAW INPUT PREDICTION
+```
 
 # Module 3 — Generative AI Assistant
 

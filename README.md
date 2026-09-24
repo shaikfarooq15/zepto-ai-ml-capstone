@@ -2,8 +2,8 @@
 
 This project brings together three connected parts of the Zepto AI/ML capstone:
 
-1. Data pipeline: web scraping, cleaning, currency conversion, SQLite storage, and SQL analysis. See [data_pipeline/README.md](data_pipeline/README.md).
-2. Analytics: Titanic data preparation, EDA, classification, imbalance handling, model tuning, and fare regression. See [analytics/README.md](analytics/README.md).
+1. Data pipeline: web scraping, cleaning, currency conversion, SQLite storage, and SQL analysis. See [Analytics/README.md](Analytics/README.md).
+2. Analytics: Titanic data preparation, EDA, classification, imbalance handling, model tuning, and fare regression. See [Data_pipeline/README.md](Data_pipeline/README.md).
 3. Support assistant: a local RAG-based Zepto policy assistant using embeddings, ChromaDB, LangGraph, and FastAPI. See [support_assistant/README.md](support_assistant/README.md).
 
 All dependencies are listed in the root `requirements.txt` file.
@@ -24,9 +24,9 @@ The first run needs internet access for the BooksToScrape website and the Senten
 
 Run from the project root:
 
-    python data_pipeline/scraper.py
+    python Analytics/scraper.py
 
-    python data_pipeline/check_database.py
+    python Analytics/check_database.py
 
 The pipeline:
 
@@ -49,9 +49,9 @@ Database:
 
 Run from the project root:
 
-    python analytics/titanic_analysis.py
+    python Data_pipeline/titanic_analysis.py
 
-    python analytics/model_pipeline.py
+    python Data_pipeline/model_pipeline.py
 
 The analytics pipeline:
 
@@ -145,18 +145,18 @@ Note: Docker was not available on the development machine during testing, so the
 
 | Requirement | Status | Where to check |
 |---|---|---|
-| Three modules in the repository | Complete | `data_pipeline/`, `analytics/`, `support_assistant/` |
+| Three modules in the repository | Complete | `Analytics/`, `Data_pipeline/`, `support_assistant/` |
 | One dependency file | Complete | `requirements.txt` |
-| 71 books and 4 categories | Complete | `data_pipeline/scraper.py` |
-| Data cleaning and currency conversion | Complete | `data_pipeline/scraper.py` |
+| 71 books and 4 categories | Complete | `Analytics/scraper.py` |
+| Data cleaning and currency conversion | Complete | `Analytics/scraper.py` |
 | Related SQLite tables | Complete | `data/books.db` |
-| SQL analysis | Complete | `data_pipeline/check_database.py` |
-| Pandas SQL JOIN comparison | Complete | `data_pipeline/check_database.py` |
-| Titanic EDA | Complete | `analytics/titanic_analysis.py` |
-| Classification models | Complete | `analytics/model_pipeline.py` |
-| Class imbalance handling | Complete | `analytics/model_pipeline.py` |
-| Random Forest tuning | Complete | `analytics/model_pipeline.py` |
-| Fare regression | Complete | `analytics/model_pipeline.py` |
+| SQL analysis | Complete | `Analytics/check_database.py` |
+| Pandas SQL JOIN comparison | Complete | `Analytics/check_database.py` |
+| Titanic EDA | Complete | `Data_pipeline/titanic_analysis.py` |
+| Classification models | Complete | `Data_pipeline/model_pipeline.py` |
+| Class imbalance handling | Complete | `Data_pipeline/model_pipeline.py` |
+| Random Forest tuning | Complete | `Data_pipeline/model_pipeline.py` |
+| Fare regression | Complete | `Data_pipeline/model_pipeline.py` |
 | Saved classification pipeline | Complete | `titanic_survival_pipeline.joblib` |
 | Saved regression pipeline | Complete | `fare_regression_pipeline.joblib` |
 | 8 policy documents | Complete | `support_assistant/docs/` |
@@ -172,13 +172,13 @@ Note: Docker was not available on the development machine during testing, so the
 
 ### Data Pipeline
 
-    python data_pipeline/scraper.py
-    python data_pipeline/check_database.py
+    python Analytics/scraper.py
+    python Analytics/check_database.py
 
 ### Analytics
 
-    python analytics/titanic_analysis.py
-    python analytics/model_pipeline.py
+    python Data_pipeline/titanic_analysis.py
+    python Data_pipeline/model_pipeline.py
 
 ### Support Assistant
 
@@ -203,3 +203,4 @@ Test the API through:
 - [x] API testing
 
 The Zepto AI/ML Capstone is ready for final repository review and submission.
+

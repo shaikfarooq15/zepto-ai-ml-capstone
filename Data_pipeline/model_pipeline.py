@@ -6,6 +6,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
+from pathlib import Path
 
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.compose import ColumnTransformer
@@ -16,6 +17,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import RandomForestClassifier
+
 
 from sklearn.metrics import (
     accuracy_score,
@@ -39,7 +41,8 @@ from imblearn.over_sampling import SMOTE
 # titanic_analysis.py downloads the dataset once and saves
 # titanic.csv. This module uses that offline CSV.
 
-df = pd.read_csv("titanic.csv")
+BASE_DIR = Path(__file__).resolve().parent
+df = pd.read_csv(BASE_DIR / "titanic.csv")
 
 print("\nDataset loaded from titanic.csv")
 print("Dataset shape:", df.shape)
@@ -435,13 +438,13 @@ print("\nFinal classification pipeline trained successfully.")
 
 joblib.dump(
     final_pipeline,
-    "titanic_survival_pipeline.joblib"
+    BASE_DIR / "titanic_survival_pipeline.joblib"
 )
 
 print("Classification pipeline saved.")
 
 loaded_pipeline = joblib.load(
-    "titanic_survival_pipeline.joblib"
+    BASE_DIR / "titanic_survival_pipeline.joblib"
 )
 
 print("Classification pipeline reloaded successfully.")
@@ -658,13 +661,13 @@ fare_pipeline.fit(
 
 joblib.dump(
     fare_pipeline,
-    "fare_regression_pipeline.joblib"
+    BASE_DIR / "fare_regression_pipeline.joblib"
 )
 
 print("\nFare regression pipeline saved.")
 
 loaded_fare_pipeline = joblib.load(
-    "fare_regression_pipeline.joblib"
+    BASE_DIR / "fare_regression_pipeline.joblib"
 )
 
 print("Fare regression pipeline reloaded successfully.")

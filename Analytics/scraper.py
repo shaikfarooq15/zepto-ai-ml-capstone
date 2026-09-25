@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import sqlite3
+from pathlib import Path
 
 
 # Convert star ratings from words to numbers
@@ -107,7 +108,8 @@ print(df[["title", "price_gbp", "price_inr"]].head())
 # 5. CREATE SQLITE DATABASE
 # -----------------------------
 
-conn = sqlite3.connect("data/books.db")
+BASE_DIR = Path(__file__).resolve().parent
+conn = sqlite3.connect(BASE_DIR / "data" / "books.db")
 
 cursor = conn.cursor()
 
@@ -201,4 +203,4 @@ conn.close()
 
 
 print("\nSQLite database created successfully!")
-print("Database: data/books.db")
+print("Database: Analytics/data/books.db")

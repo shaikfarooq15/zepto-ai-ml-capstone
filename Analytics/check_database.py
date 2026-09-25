@@ -1,8 +1,10 @@
 import sqlite3
+from pathlib import Path
+
 import pandas as pd
 
-conn = sqlite3.connect("data/books.db")
-
+BASE_DIR = Path(__file__).resolve().parent
+conn = sqlite3.connect(BASE_DIR / "data" / "books.db")
 books_df = pd.read_sql("SELECT * FROM Books", conn)
 
 categories_df = pd.read_sql("SELECT * FROM Categories", conn)

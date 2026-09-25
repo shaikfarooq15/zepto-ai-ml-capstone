@@ -2,15 +2,23 @@
 
 This project brings together three connected parts of the Zepto AI/ML capstone:
 
-1. Data pipeline: web scraping, cleaning, currency conversion, SQLite storage, and SQL analysis. See [Analytics/README.md](Analytics/README.md).
-2. Analytics: Titanic data preparation, EDA, classification, imbalance handling, model tuning, and fare regression. See [Data_pipeline/README.md](Data_pipeline/README.md).
-3. Support assistant: a local RAG-based Zepto policy assistant using embeddings, ChromaDB, LangGraph, and FastAPI. See [support_assistant/README.md](support_assistant/README.md).
+1. **Data Pipeline:** web scraping, data cleaning, currency conversion, SQLite storage, and SQL analysis. See [data_pipeline/README.md](data_pipeline/README.md).
+
+2. **Analytics:** Titanic data preparation, EDA, classification, imbalance handling, model tuning, and fare regression. See [analytics/README.md](analytics/README.md).
+
+3. **Support Assistant:** a local RAG-based Zepto policy assistant using embeddings, ChromaDB, LangGraph, and FastAPI. See [support_assistant/README.md](support_assistant/README.md).
 
 All dependencies are listed in the root `requirements.txt` file.
 
+---
+
 ## Setup
 
-    pip install -r requirements.txt
+Install the project dependencies from the repository root:
+
+```bash
+pip install -r requirements.txt
+```
 
 Python 3.11+ is recommended.
 
@@ -22,74 +30,115 @@ The first run needs internet access for the BooksToScrape website and the Senten
 
 ## Module 1: Data Pipeline
 
-Run from the project root:
+The Data Pipeline module scrapes book data from BooksToScrape, cleans the data, performs currency conversion, stores the data in SQLite, and demonstrates SQL and Pandas analysis.
 
-    python Analytics/scraper.py
+### Run from the project root
 
-    python Analytics/check_database.py
+```bash
+python data_pipeline/scraper.py
+python data_pipeline/check_database.py
+```
 
-The pipeline:
+### Pipeline workflow
 
 - Scrapes books from BooksToScrape
 - Collects 71 books from 4 categories
 - Cleans price, rating, and availability
 - Converts GBP to INR using 1 GBP = 105.50 INR
 - Creates the SQLite database
-- Creates related Categories and Books tables
+- Creates related `Categories` and `Books` tables
 - Performs SQL analysis
-- Reproduces SQL JOIN using Pandas
+- Reproduces the SQL JOIN using Pandas
 
-Database:
+### Database
 
-    data/books.db
+```text
+data_pipeline/data/books.db
+```
+
+### Technologies
+
+- Python
+- Requests
+- BeautifulSoup
+- Pandas
+- SQLite
 
 ---
 
 ## Module 2: Analytics
 
-Run from the project root:
+The Analytics module uses the Titanic dataset to perform exploratory data analysis and build machine learning models for survival classification and fare prediction.
 
-    python Data_pipeline/titanic_analysis.py
+### Run from the project root
 
-    python Data_pipeline/model_pipeline.py
+```bash
+python analytics/titanic_analysis.py
+python analytics/model_pipeline.py
+```
 
-The analytics pipeline:
+### Analytics workflow
 
 - Cleans the Titanic dataset
-- Performs EDA
+- Performs exploratory data analysis
 - Analyzes missing values and outliers
 - Standardizes numerical features
 - Trains classification models
 - Handles class imbalance using class weighting and SMOTE
 - Tunes Random Forest using GridSearchCV
 - Performs fare regression
+- Evaluates model performance
 - Saves and reloads ML pipelines
 
-Classification models:
+### Classification models
 
 - Logistic Regression
 - Decision Tree
 - Random Forest
 - Tuned Random Forest
 
-Regression model:
+### Regression model
 
-    Linear Regression
+- Linear Regression
+
+### Saved pipelines
+
+```text
+analytics/titanic_survival_pipeline.joblib
+analytics/fare_regression_pipeline.joblib
+```
+
+### Technologies
+
+- Python
+- Pandas
+- NumPy
+- Seaborn
+- Matplotlib
+- Scikit-learn
+- Imbalanced-learn
+- Joblib
 
 ---
 
 ## Module 3: Support Assistant
 
-Run from the project root:
+The Support Assistant is a local RAG-based Zepto policy assistant using policy documents, embeddings, ChromaDB, LangGraph, and FastAPI.
 
-    cd support_assistant
-    python -m uvicorn main:app --reload --port 8000
+### Run from the project root
+
+```bash
+cd support_assistant
+python -m uvicorn main:app --reload --port 8000
+```
 
 Open the API documentation:
 
-    http://127.0.0.1:8000/docs
+```text
+http://127.0.0.1:8000/docs
+```
 
-The assistant:
+### Assistant workflow
 
 - Loads 8 Zepto policy documents
 - Creates embeddings using Sentence Transformers
@@ -99,13 +148,17 @@ The assistant:
 - Returns structured JSON responses
 - Exposes the `/ask` FastAPI endpoint
 
-Example request:
+### Example request
 
-    POST /ask
+```text
+POST /ask
+```
 
-    {
-        "query": "What is the delivery policy?"
-    }
+```json
+{
+    "query": "What is the delivery policy?"
+}
+```
 
 `MOCK_LLM` is enabled by default, so the application can run without a paid external LLM API.
 
@@ -115,29 +168,43 @@ Example request:
 
 A Dockerfile is included for the Support Assistant.
 
-Build:
+### Build
 
-    docker build -f support_assistant/Dockerfile -t zepto-support-assistant .
+```bash
+docker build -f support_assistant/Dockerfile -t zepto-support-assistant .
+```
 
-Run:
+### Run
 
-    docker run --rm -p 7860:7860 zepto-support-assistant
+```bash
+docker run --rm -p 7860:7860 zepto-support-assistant
+```
 
 The Docker service exposes:
 
-    http://127.0.0.1:7860
+```text
+http://127.0.0.1:7860
+```
 
-Note: Docker was not available on the development machine during testing, so the Docker build itself was not executed locally.
+**Note:** Docker was not available on the development machine during testing, so the Docker build itself was not executed locally.
 
 ---
 
-## Notes on the Implementation
+## Design Decisions
 
-- Data Pipeline: Requests and BeautifulSoup are used for scraping, Pandas handles cleaning, and SQLite stores the normalized relational data.
-- Analytics: the Titanic workflow includes EDA, classification, imbalance handling, Random Forest tuning, and fare regression. Joblib is used for pipeline persistence.
-- Support Assistant: policy documents and vector storage remain local. Sentence Transformers provides embeddings and ChromaDB provides semantic retrieval.
-- Support Assistant: LangGraph handles policy/general intent routing and FastAPI exposes the application.
-- `MOCK_LLM` allows the Support Assistant to run without an external paid LLM service.
+### Data Pipeline
+
+Requests and BeautifulSoup are used for web scraping, Pandas handles data cleaning and transformation, and SQLite provides local relational storage for the scraped data.
+
+### Analytics
+
+The Titanic workflow combines EDA, classification, class-imbalance handling, Random Forest tuning, and fare regression. Joblib is used for model pipeline persistence.
+
+### Support Assistant
+
+Policy documents and vector storage remain local. Sentence Transformers provides embeddings, ChromaDB provides semantic retrieval, and LangGraph handles policy/general intent routing. FastAPI exposes the application through an API endpoint.
+
+`MOCK_LLM` allows the Support Assistant to run without an external paid LLM service.
 
 ---
 
@@ -145,20 +212,20 @@ Note: Docker was not available on the development machine during testing, so the
 
 | Requirement | Status | Where to check |
 |---|---|---|
-| Three modules in the repository | Complete | `Analytics/`, `Data_pipeline/`, `support_assistant/` |
+| Three modules in the repository | Complete | `data_pipeline/`, `analytics/`, `support_assistant/` |
 | One dependency file | Complete | `requirements.txt` |
-| 71 books and 4 categories | Complete | `Analytics/scraper.py` |
-| Data cleaning and currency conversion | Complete | `Analytics/scraper.py` |
-| Related SQLite tables | Complete | `data/books.db` |
-| SQL analysis | Complete | `Analytics/check_database.py` |
-| Pandas SQL JOIN comparison | Complete | `Analytics/check_database.py` |
-| Titanic EDA | Complete | `Data_pipeline/titanic_analysis.py` |
-| Classification models | Complete | `Data_pipeline/model_pipeline.py` |
-| Class imbalance handling | Complete | `Data_pipeline/model_pipeline.py` |
-| Random Forest tuning | Complete | `Data_pipeline/model_pipeline.py` |
-| Fare regression | Complete | `Data_pipeline/model_pipeline.py` |
-| Saved classification pipeline | Complete | `titanic_survival_pipeline.joblib` |
-| Saved regression pipeline | Complete | `fare_regression_pipeline.joblib` |
+| 71 books and 4 categories | Complete | `data_pipeline/scraper.py` |
+| Data cleaning and currency conversion | Complete | `data_pipeline/scraper.py` |
+| Related SQLite tables | Complete | `data_pipeline/data/books.db` |
+| SQL analysis | Complete | `data_pipeline/check_database.py` |
+| Pandas SQL JOIN comparison | Complete | `data_pipeline/check_database.py` |
+| Titanic EDA | Complete | `analytics/titanic_analysis.py` |
+| Classification models | Complete | `analytics/model_pipeline.py` |
+| Class imbalance handling | Complete | `analytics/model_pipeline.py` |
+| Random Forest tuning | Complete | `analytics/model_pipeline.py` |
+| Fare regression | Complete | `analytics/model_pipeline.py` |
+| Saved classification pipeline | Complete | `analytics/titanic_survival_pipeline.joblib` |
+| Saved regression pipeline | Complete | `analytics/fare_regression_pipeline.joblib` |
 | 8 policy documents | Complete | `support_assistant/docs/` |
 | Embeddings and ChromaDB | Complete | `support_assistant/main.py` |
 | LangGraph routing | Complete | `support_assistant/main.py` |
@@ -170,37 +237,41 @@ Note: Docker was not available on the development machine during testing, so the
 
 ## Verification
 
-### Data Pipeline
+### Module 1: Data Pipeline
 
-    python Analytics/scraper.py
-    python Analytics/check_database.py
+Run from the project root:
 
-### Analytics
+```bash
+python data_pipeline/scraper.py
+python data_pipeline/check_database.py
+```
 
-    python Data_pipeline/titanic_analysis.py
-    python Data_pipeline/model_pipeline.py
+### Module 2: Analytics
 
-### Support Assistant
+Run from the project root:
 
-    cd support_assistant
-    python -m uvicorn main:app --reload --port 8000
+```bash
+python analytics/titanic_analysis.py
+python analytics/model_pipeline.py
+```
+
+### Module 3: Support Assistant
+
+Run:
+
+```bash
+cd support_assistant
+python -m uvicorn main:app --reload --port 8000
+```
 
 Test the API through:
 
-    http://127.0.0.1:8000/docs
+```text
+http://127.0.0.1:8000/docs
+```
 
 ---
 
-## Project Status
 
-- [x] Data Pipeline
-- [x] Analytics
-- [x] Support Assistant
-- [x] Module READMEs
-- [x] Root README
-- [x] Requirements file
-- [x] Dockerfile
-- [x] API testing
 
-The Zepto AI/ML Capstone is ready for final repository review and submission.
 

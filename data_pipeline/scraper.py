@@ -203,4 +203,4 @@ conn.close()
 
 
 print("\nSQLite database created successfully!")
-print("Database: Analytics/data/books.db")
+print("Database: data_pipeline/data/books.db")

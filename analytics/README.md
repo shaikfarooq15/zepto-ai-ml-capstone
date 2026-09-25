@@ -105,7 +105,7 @@ Classification and regression pipelines were saved using Joblib and successfully
 
 ## Project Structure
 
-    module1_data_pipeline/
+    analytics/
     ├── titanic_analysis.py
     ├── model_pipeline.py
     ├── titanic.csv

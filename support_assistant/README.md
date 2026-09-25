@@ -84,7 +84,7 @@ Example response:
     {
       "answer": "Based on the retrieved context: ...",
       "sources": ["doc_01"],
-      "confidence": 1.0
+      "confidence": 0
     }
 
 The confidence value is restricted between `0.0` and `1.0`.
